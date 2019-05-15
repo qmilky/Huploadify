@@ -30,9 +30,9 @@
 			onSelect:null,//选择文件后的回调函数，可传入参数file
 			onQueueComplete:null//队列中的所有文件上传完成后触发
 		}
-			
+        //jQuery.extend() 函数用于将一个或多个对象的内容合并到目标对象。
+		// 如果多个对象具有相同的属性，则后者会覆盖前者的属性值。
 		var option = $.extend(defaults,opts);
-
 		//定义一个通用函数集合
 		var F = {
 			//将文件的单位由bytes转换为KB或MB，若第二个参数指定为true，则永远转换为KB
@@ -126,6 +126,8 @@
 							uploadManager.uploadStopped = true;
 						},
 						upload : function(fileIndex){
+							console.log('upload 函数');
+							console.log(fileIndex);
 							if(fileIndex === '*'){
 								for(var i=0,len=uploadManager.filteredFiles.length;i<len;i++){
 									uploadManager._uploadFile(uploadManager.filteredFiles[i]);
@@ -191,6 +193,8 @@
 
 					//文件选择控件选择
 					var fileInput = this._getInputBtn();
+					console.log('文件选择 onchange 事件');
+					console.log(this);
 				  	if (fileInput.length>0) {
 						fileInput.change(function(e) { 
 							uploadManager._getFiles(e); 
@@ -301,11 +305,13 @@
 				//获取选择后的文件
 				_getFiles : function(e){
 			  		var files = e.target.files;
-			  		files = uploadManager._filter(files);
+			  		console.log('_getFiles');
+			  		console.log(e);
+			  		files = uploadManager._filter(files);  //判断文件是否合法
 			  		var fileCount = _this.find('.uploadify-queue .uploadify-queue-item').length;//队列中已经有的文件个数
-		  			for(var i=0,len=files.length;i<len;i++){
-		  				files[i].index = ++fileCount;
-		  				files[i].status = 0;//标记为未开始上传
+		  			for(var i=0,len=files.length;i<len;i++){  // 有可能选择文件时一次选择多个，因此要遍历
+		  				files[i].index = ++fileCount;// 主要记录该文件是文件队列中的第几个文件
+		  				files[i].status = 0;//标记为未开始上传  //TODO originalfile  中 status 属性的由来，1正在上传，2上传成功
 		  				uploadManager.filteredFiles.push(files[i]);
 		  				var l = uploadManager.filteredFiles.length;
 		  				uploadManager._renderFile(uploadManager.filteredFiles[l-1]);
@@ -354,7 +360,9 @@
 						eleProgress.nextAll('.up_percent').text(percentText);	
 					}
 					progressBar.css('width', percentText);
-
+					console.log(9999999);
+					console.log(thisLoaded);
+					console.log(lastLoaded);
 					//记录本次触发progress时已上传的大小，用来计算下次需增加的数量
 					if(thisLoaded<option.fileSplitSize){
 						eleProgress.attr('lastLoaded',thisLoaded);
@@ -383,11 +391,16 @@
 			  		}
 			  		return queueData;
 			  	},
-			  	//上传文件片
+			  	//上传文件片，真正上传到服务器的 ajax
 			  	_sendBlob : function(xhr, file, originalfile){
 			  		if(file.status===0){
 						file.status = 1;//标记为正在上传
 						uploadManager.uploadStopped = false;
+						console.log(55555);
+						console.log(file);
+						console.log(originalfile);
+						console.log(xhr);
+
 						xhr.open(option.method, option.uploader, true);
 						xhr.setRequestHeader("X-Requested-With", "XMLHttpRequest");
 						var fd = new FormData();
@@ -425,39 +438,43 @@
 				  	//判断是否开启断点续传
 				  	if(option.breakPoints){
 				  		var uploadedSize = 0;
-				  		if(option.getUploadedSize){
+				  		if(option.getUploadedSize){  // TODO ???
 				  			uploadedSize = option.getUploadedSize(originalFile);
 				  		}
 				  		else{
 				  			alert('请先配置getUploadedSize参数！');
 				  			return;
 				  		}
+				  		// slice() 将一个完整的文件切割成大小相等的片，一片一片上传。
 				  		file = originalFile.slice(uploadedSize,uploadedSize + option.fileSplitSize);
 				  		file.status = originalFile.status;
 				  		file.name = originalFile.name;
 				  	}
-
+					//XMLHttpRequest.upload 属性返回一个 XMLHttpRequestUpload对象，用来表示上传的进度。这个对象是不透明的，但是作为一个XMLHttpRequestEventTarget，可以通过对其绑定事件来追踪它的进度。
 				  	if(xhr.upload){
 				  		// 上传中
-					  	xhr.upload.onprogress = function(e) {
+					  	xhr.upload.onprogress = function(e) {  // 数据传输进行中,绑定事件追踪进度
+					  		console.log(888888);
+					  		console.log(e);
 							uploadManager.onProgress(file, originalFile, e.loaded, e.total);
 						};
-
+						// 该 ajax 回调保证没有上传完成就一直上传
 						xhr.onreadystatechange = function(e) {
 							if(xhr.readyState == 4){
 								uploadManager.uploadOver = true;
 								if(xhr.status == 200){
 									if(option.breakPoints){
 										//保存已上传文件大小
-										uploadedSize += option.fileSplitSize;
+										uploadedSize += option.fileSplitSize; //每执行一次上传一片，所以此处直接累加就可以知道已经上传的文件大小
 										if(option.saveUploadedSize){
+											// 将已经上传的文件保存到浏览器的 localstorage 本地存储中
 											option.saveUploadedSize(originalFile,uploadedSize);	
 										}
 										else{
 											alert('请先配置saveUploadedSize参数！');
 											return;
 										}
-										//继续上传其他片段
+										//继续上传其他片段，通过该条件判断分片文件是否上传完。
 										if(uploadedSize<originalFile.size){
 											uploadManager.uploadOver = false;
 											if(!uploadManager.uploadStopped){

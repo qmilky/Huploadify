@@ -19,11 +19,14 @@ $(function(){
 		showUploadedPercent:true,
 		showUploadedSize:true,
 		removeTimeout:9999999,
-		uploader:'upload.php',
+		uploader:'./upload.php',
 		breakPoints:true,
+		// fileSplitSize:1024*1024,//断点续传的文件块大小，单位Byte，默认1M
 		fileSplitSize:1024*1024,//断点续传的文件块大小，单位Byte，默认1M
 		getUploadedSize:function(file){
 			var size = parseInt(localStorage.getItem(file.name)) || 0;
+			console.log('getUploadedSize');
+			console.log(size);
 			return size;
 		},//类型：function，自定义获取已上传文件的大小函数，用于开启断点续传模式，可传入一个参数file，即当前上传的文件对象，需返回number类型
 		saveUploadedSize:function(file, value){

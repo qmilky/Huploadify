@@ -1,4 +1,6 @@
 #HuploadifyV2.0
+原文：https://github.com/Double-Lv/HuploadifyV2.0
+此处纯属复制，只是为了方便查找
 ###支持断点续传功能的HTML5文件上传插件
 ==========
 
